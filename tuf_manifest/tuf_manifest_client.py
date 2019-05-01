@@ -25,6 +25,14 @@ logger = logging.getLogger('tuf.scripts.client')
 default_conffile = os.path.join("etc", "tuf-manifest.conf")
 default_vardir = os.path.join("var", "tuf-manifest")
 
+# FIXME - add an option to apply all manifests in sequence, to avoid
+# downloading large amounts of data, especially for delta updates.
+
+# FIXME - figure out a way to require that a specific update (manifest
+# file) be applied even if later ones are available.  For instance, if
+# there is a bug that causes future updates to fail, you want to just
+# fix that bug in an update before going to future updates.
+
 confdefaults = {
     'vardir'  :  default_vardir,
     'numfile' : None,
@@ -46,7 +54,7 @@ def read_manifest(filename):
     filename second.
     """
     mf = {}
-    with open(filename) as f:
+    with open(os.path.join("targets", filename)) as f:
         lineno = 1;
         for line in f:
             v = line.split()
@@ -109,7 +117,7 @@ class tuf_manifest_client:
         """
         if conffile is None:
             conffile = default_conffile;
-        config = ConfigParser.ConfigParser()
+        config = ConfigParser.ConfigParser(confdefaults)
         config.read((conffile))
         if vardir is None:
             vardir = config.get("Manifest", "vardir")
@@ -141,29 +149,32 @@ class tuf_manifest_client:
         self.filebase = filebase
         self.handler = handler
 
-        numconfig = ConfigParser.ConfigParser({ "curr_manifest" : "1" })
-        numconfig.read((self.numfile))
-        self.curr_num = numconfig.getint("Manifest", "curr_manifest")
+        try:
+            numconfig = ConfigParser.ConfigParser({ "curr_manifest" : "1" })
+            numconfig.read((self.numfile))
+            self.curr_num = numconfig.getint("Manifest", "curr_manifest")
+        except ConfigParser.NoSectionError:
+            self.curr_num = 1
         return
 
     def get_manifest(self, num = 0):
         if num == 0:
             num = self.curr_num
 
-        mff = self.filebase + '.' + str(self.curr_num)
-        mff_full = os.path.isfile(os.path.join(self.filedir, mff))
-        target = get_one_valid_target(mff)
-        updated_target = update.updated_targets((target), self.filedir)
-        for target in updated_target:
-            updater.download_target(target, self.filedir)
-
+        mff = self.filebase + '.' + str(num)
+        mff_full = os.path.join(self.filedir, mff)
+        target = self.get_files([mff])
         return mff_full
 
     def get_files(self, file_list):
-        updated_targets = update.updated_targets(file_list, self.filedir)
-        for target in updated_target:
+        target_fileinfo = []
+        for f in file_list:
+            target_fileinfo.append(self.updater.get_one_valid_targetinfo(f))
+        updated_targets = self.updater.updated_targets(target_fileinfo,
+                                                       self.filedir)
+        for target in updated_targets:
             try:
-                updater.download_target(target, self.filedir)
+                self.updater.download_target(target, self.filedir)
             except tuf.exceptions.DownloadError:
                 logger.error("Unable to download file '%s'" % target)
                 raise
@@ -189,7 +200,7 @@ class tuf_manifest_client:
             new.append(new_mf[i][1])
         self.get_files(updated + new)
         return subprocess.call((self.handler, " ".join(new),
-                                " ",join(updated), " ".join(deleted)))
+                                " ".join(updated), " ".join(deleted)))
 
     def do_update(self):
         """When the do_update() method is called it will connect to the
@@ -210,9 +221,11 @@ class tuf_manifest_client:
                                          'targets_path': 'targets',
                                          'confined_target_dirs': ['']}}
 
-        updater = tuf.client.updater.Updater('tufrepo', repository_mirrors)
+        tuf.settings.repositories_directory = self.filedir
 
-        updater.refresh(unsafely_update_root_if_necessary=False)
+        self.updater = tuf.client.updater.Updater('tufrepo', repository_mirrors)
+
+        self.updater.refresh(unsafely_update_root_if_necessary=False)
 
         # Get the current manifest if we do not already have it.
         try:
@@ -226,8 +239,8 @@ class tuf_manifest_client:
         new_mff = None
         while True:
             try:
-                new_mff = self.get_manifest(i)
-            except tuf.exceptions.DownloadError:
+                new_mff = self.get_manifest(num=i)
+            except tuf.exceptions.UnknownTargetError:
                 break
             i = i + 1
         if new_mff is None:
@@ -240,15 +253,16 @@ class tuf_manifest_client:
         if rv == 0:
             # Update was successfull, save the new manifest file number
             numconfig = ConfigParser.ConfigParser()
+            numconfig.add_section("Manifest")
             numconfig.set("Manifest", "curr_manifest", str(i))
-            numconfig.write(open(self.numfile))
+            numconfig.write(open(self.numfile, "w"))
 
             # Remove all the old manifest files.
             for j in range(self.curr_num, i - 1):
-                os.remove(os.path.join(self.filedir,
+                os.remove(os.path.join(self.filedir, "target", 
                                        self.filebase + "." + str(j)))
         return rv
 
 if __name__ == '__main__':
-    c = tuf_manifest_client()
+    c = tuf_manifest_client(conffile="tuf-manifest.conf")
     sys.exit(c.do_update())
