@@ -36,6 +36,7 @@ default_vardir = os.path.join("var", "tuf-manifest")
 confdefaults = {
     'vardir'  :  default_vardir,
     'numfile' : None,
+    'repodir' : None,
     'filedir' : None,
     'url'     : None,
     'filebase': None,
@@ -76,6 +77,7 @@ class tuf_manifest_client:
     [Manifest]
     vardir=/var/tuf-manifest
     numfile=<vardir>/num
+    repodir=<vardir>
     filedir=<vardir>/files
     url=<user must set this>
     filebase=manifest
@@ -95,6 +97,9 @@ class tuf_manifest_client:
     [Manifest]
     curr_manifest=n
 
+    The repodir is the directory where tufrepo resides (which holds
+    the metadata).
+
     The filedir is where the files (inlcuding the manifests) are
     downloaded to.  Note that after the handler finishes its execution,
     it is free to delete all the files in this directory.
@@ -108,10 +113,12 @@ class tuf_manifest_client:
     leave the manifest number alone.
 
     Call the do_update() method to actually perform the operation.
+
     """
 
     def __init__(self, conffile = None, vardir = None, numfile = None,
-                 url = None, filedir = None, filebase = None, handler = None):
+                 url = None, repodir = None, filedir = None,
+                 filebase = None, handler = None):
         """Allocate a new object.  All the configuration items may be
         overridden by passing in strings for them.
         """
@@ -129,6 +136,10 @@ class tuf_manifest_client:
             url = config.get("Manifest", "url")
             if url is None:
                 raise Exception("No url in config file %s" % conffile)
+        if repodir is None:
+            repodir = config.get("Manifest", "repodir")
+            if repodir is None:
+                repodir = vardir
         if filedir is None:
             filedir = config.get("Manifest", "filedir")
             if filedir is None:
@@ -145,6 +156,7 @@ class tuf_manifest_client:
         self.vardir = vardir
         self.numfile = numfile
         self.url = url
+        self.repodir = repodir
         self.filedir = filedir
         self.filebase = filebase
         self.handler = handler
@@ -221,7 +233,7 @@ class tuf_manifest_client:
                                          'targets_path': 'targets',
                                          'confined_target_dirs': ['']}}
 
-        tuf.settings.repositories_directory = self.filedir
+        tuf.settings.repositories_directory = self.repodir
 
         self.updater = tuf.client.updater.Updater('tufrepo', repository_mirrors)
 
@@ -259,10 +271,17 @@ class tuf_manifest_client:
 
             # Remove all the old manifest files.
             for j in range(self.curr_num, i - 1):
-                os.remove(os.path.join(self.filedir, "target", 
+                os.remove(os.path.join(self.filedir,
                                        self.filebase + "." + str(j)))
         return rv
 
 if __name__ == '__main__':
-    c = tuf_manifest_client(conffile="tuf-manifest.conf")
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Do a TUF update")
+    parser.add_argument("--conffile",
+                        help="The configuration file to use",
+                        default=None)
+    args = parser.parse_args()
+    c = tuf_manifest_client(conffile=args.conffile)
     sys.exit(c.do_update())
