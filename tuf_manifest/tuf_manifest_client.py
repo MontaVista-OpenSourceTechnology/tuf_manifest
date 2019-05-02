@@ -33,6 +33,10 @@ default_vardir = os.path.join("var", "tuf-manifest")
 # there is a bug that causes future updates to fail, you want to just
 # fix that bug in an update before going to future updates.
 
+# FIXME - In some situations it may be best to not update the number
+# file, if it is read-only, for instance, and gets updated with a new
+# image.  Add a field for that.
+
 confdefaults = {
     'vardir'  :  default_vardir,
     'numfile' : None,
@@ -274,14 +278,3 @@ class tuf_manifest_client:
                 os.remove(os.path.join(self.filedir,
                                        self.filebase + "." + str(j)))
         return rv
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Do a TUF update")
-    parser.add_argument("--conffile",
-                        help="The configuration file to use",
-                        default=None)
-    args = parser.parse_args()
-    c = tuf_manifest_client(conffile=args.conffile)
-    sys.exit(c.do_update())

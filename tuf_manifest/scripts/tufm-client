@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+
+# Copyright 2019, MontaVista Software, LLC
+# SPDX-License-Identifier: MIT
+
+import argparse
+import tuf
+import tuf_manifest_client from tuf_manifest.tuf_manifest_client
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Do a TUF update")
+    parser.add_argument("--conffile",
+                        help="The configuration file to use",
+                        default=None)
+    args = parser.parse_args()
+    c = tuf_manifest_client(conffile=args.conffile)
+    sys.exit(c.do_update())
