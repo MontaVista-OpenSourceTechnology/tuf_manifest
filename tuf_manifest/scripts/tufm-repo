@@ -3,8 +3,9 @@
 # Copyright 2019, MontaVista Software, LLC
 # SPDX-License-Identifier: MIT
 
+import sys
 import tuf
-import * from tuf_manifest.tuf_manifest_repo
+from tuf_manifest.tuf_manifest_repo import *
 
 if __name__ == '__main__':
     arguments = parse_arguments()
