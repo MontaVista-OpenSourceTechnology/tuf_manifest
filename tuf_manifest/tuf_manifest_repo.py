@@ -102,9 +102,7 @@ def load_manifest(manifest, dirs, arguments):
                 for d in dirs:
                     sfname = os.path.join(d, filename)
                     if os.path.isfile(sfname):
-                        dfname = os.path.join(arguments.path,
-                                              tuf.scripts.repo.REPO_DIR,
-                                              filename)
+                        dfname = os.path.join(tpath, filename)
                         if not os.path.exists(dfname):
                             shutil.copyfile(sfname, dfname)
                             files.append(filename)
@@ -115,13 +113,13 @@ def load_manifest(manifest, dirs, arguments):
                                          "but it does not exist" %
                                          (filename, lineno))
 
-            lineno++
+            lineno += 1
 
         shutil.copyfile(manifest, os.path.join(tpath, manifest_base))
     return files
 
 def load_manifests(arguments):
-    repo = repo_tool.load_repository(os.path.join(parsed_arguments.path,
+    repo = repo_tool.load_repository(os.path.join(arguments.path,
                                                   tuf.scripts.repo.REPO_DIR))
     if not arguments.manifest_dir:
         dirs = [ os.getcwd() ]
@@ -137,7 +135,7 @@ def load_manifests(arguments):
     for manifest in arguments.manifest:
         newfiles += load_manifest(manifest, dirs, arguments)
     for filename in newfiles:
-        roleinfo['paths'].update({target_path: {}})
+        roleinfo['paths'].update({filename: {}})
     tuf.roledb.update_roleinfo(arguments.role, roleinfo,
                                mark_role_as_dirty=True,
                                repository_name=repo._repository_name)
@@ -182,7 +180,7 @@ def process_arguments(arguments):
         update_timestamp(arguments)
     if arguments.load_manifest:
         load_manifests(arguments)
-    tuf.scripts.repo.process_arguments(arguments)
+    tuf.scripts.repo.process_command_line_arguments(arguments)
     return
 
 def parse_arguments():
