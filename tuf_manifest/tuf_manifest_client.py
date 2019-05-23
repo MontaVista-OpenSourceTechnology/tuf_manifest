@@ -108,12 +108,18 @@ class tuf_manifest_client:
     downloaded to.  Note that after the handler finishes its execution,
     it is free to delete all the files in this directory.
 
+    filebase sets the manifest filename (without the ".<number>"
+    appended).  You can change the manifest filename for clarity, and
+    to allow multiple release streams for different things to be held
+    in the same repository.
+
     The handler is a program that will receive the list of files.  The
-    first argument is a space-seperated list of new files, the second
-    is a space-separated list of updated files, and the this is a
-    space-separated list of files that were deleted.  If the handler
-    returns success, this class will assume the update is successful
-    and update to the new manifest.  If it returns failure, it will
+    first argument is a space-seperated list of new files (full path),
+    the second is a space-separated list of updated files (full path),
+    and the third is a space-separated list of package names (no
+    filename or path) that were deleted.  If the handler returns
+    success, this class will assume the update is successful and
+    update to the new manifest number.  If it returns failure, it will
     leave the manifest number alone.
 
     Call the do_update() method to actually perform the operation.
@@ -207,16 +213,23 @@ class tuf_manifest_client:
                 if curr_mf[i][0] != new_mf[i][0]:
                     # Version updated
                     updated.append(new_mf[i][1])
-                del curr_mf[i]
                 del new_mf[i]
             else:
-                deleted.append(curr_mf[i][1])
-                del curr_mf[i]
+                deleted.append(i)
         for i in new_mf:
             new.append(new_mf[i][1])
         self.get_files(updated + new)
-        return subprocess.call((self.handler, " ".join(new),
-                                " ".join(updated), " ".join(deleted)))
+
+        # Add in the full file path for all the update files.
+        newfp = []
+        for i in new:
+            newfp.append(os.path.join(self.filedir, i))
+        updatedfp = []
+        for i in updated:
+            updatedfp.append(os.path.join(self.filedir, i))
+
+        return subprocess.call((self.handler, " ".join(newfp),
+                                " ".join(updatedfp), " ".join(deleted)))
 
     def do_update(self):
         """When the do_update() method is called it will connect to the
