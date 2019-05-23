@@ -22,8 +22,8 @@ import tuf.log
 
 logger = logging.getLogger('tuf.scripts.client')
 
-default_conffile = os.path.join("etc", "tuf-manifest.conf")
-default_vardir = os.path.join("var", "tuf-manifest")
+default_conffile = os.path.join(os.sep + "etc", "tuf-manifest.conf")
+default_vardir = os.path.join(os.sep + "var", "tuf-manifest")
 
 # FIXME - add an option to apply all manifests in sequence, to avoid
 # downloading large amounts of data, especially for delta updates.

@@ -6,6 +6,7 @@
 import argparse
 import tuf
 import tuf_manifest.tuf_manifest_client as tufmc
+import sys
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Do a TUF update")
