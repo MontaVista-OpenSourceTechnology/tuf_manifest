@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tuf_manifest",
-    version="0.0.2",
+    version="0.0.3",
     author="Corey Minyard",
     author_email="cminyard@mvista.com",
     description="A layer on top of tuf to provide file delivery with manifests",
