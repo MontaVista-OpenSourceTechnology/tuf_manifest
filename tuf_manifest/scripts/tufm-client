@@ -5,7 +5,7 @@
 
 import argparse
 import tuf
-import tuf_manifest_client from tuf_manifest.tuf_manifest_client
+import tuf_manifest.tuf_manifest_client as tufmc
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Do a TUF update")
@@ -13,5 +13,5 @@ if __name__ == '__main__':
                         help="The configuration file to use",
                         default=None)
     args = parser.parse_args()
-    c = tuf_manifest_client(conffile=args.conffile)
+    c = tufmc.tuf_manifest_client(conffile=args.conffile)
     sys.exit(c.do_update())

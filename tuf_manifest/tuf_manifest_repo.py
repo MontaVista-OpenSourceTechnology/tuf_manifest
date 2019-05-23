@@ -180,7 +180,7 @@ def process_arguments(arguments):
         update_timestamp(arguments)
     if arguments.load_manifest:
         load_manifests(arguments)
-    tuf.scripts.repo.process_command_line_arguments(arguments)
+    tuf.scripts.repo.process_arguments(arguments)
     return
 
 def parse_arguments():
